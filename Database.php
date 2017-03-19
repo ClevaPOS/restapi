@@ -16,11 +16,10 @@
             foreach ($res as $r) {
                 array_push($results, $r);
             }
+
             header('Content-type: application/json; charset=utf-8');
             echo json_encode($results);
         }
-
-
     }
 
     $userid = $_GET['userid'];

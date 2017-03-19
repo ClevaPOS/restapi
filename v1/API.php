@@ -7,6 +7,7 @@
  */
 
 require_once(dirname(__FILE__) . '/config.php');
+require_once(dirname(__FILE__) . '/Authentication.php');
 
 
 class API {
@@ -66,8 +67,6 @@ class API {
                 //var_dump($this->request);
                 //$request = $this->cleanInputs($this->request);
                 $this->insertUser($this->request);
-
-
                 break;
             case 'GET':
                 $this->authenticateUser($this->request);
@@ -94,20 +93,18 @@ class API {
      */
     public function insertUser($request) {
 
-        $name = $request['name'];
-        $usr = $request['username'];
-        $pwd = $request['pwd'];
-        $email = $request['email'];
-        $phone = $request['phone'];
-        $status = $request['status'];
-
+        $name = !empty($request['name']) ? $request['name'] : '' ;
+        $usr = !empty($request['username']) ? $request['username'] : '';
+        $pwd = !empty($request['pwd']) ? $request['pwd'] : '';
+        $email = !empty($request['email']) ? $request['email'] : '';
+        $phone = !empty($request['phone']) ? $request['phone'] : '';
+        $status = !empty($request['status']) ? $request['status'] : '';
 
         if (isset($name) && isset($usr) && isset($pwd) && isset($email) && isset($status) && isset($phone)) {
 
             try {
+
                 $conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
-
-
                 $usr = mysqli_real_escape_string($conn, $usr);
                 $pwd = mysqli_real_escape_string($conn, $pwd);
                 $pwd = md5($pwd);
@@ -118,21 +115,18 @@ class API {
                 $phone = mysqli_real_escape_string($conn, $phone);
 
 
-                $query = "Select * from account where account.`username` = '$usr' OR account.`email` = '$email' ";
-
+                $query = "Select * from user where user.`username` = '$usr' OR user.`email` = '$email' ";
                 $result = $conn->query($query);
 
                 if ($result->num_rows > 0) {
                     $json = array("status" => 0, "msg" => "Username or Email is already existed");
                 } elseif ($result->num_rows == 0) {
-                    $query = "INSERT INTO account( name, email, phone, username, password, status) values ('$name', '$email', '$phone', '$usr', '$pwd', '$status') ";
+                    $query = "INSERT INTO user( name, email, phone, username, password, status) values ('$name', '$email', '$phone', '$usr', '$pwd', '$status') ";
                     if (!$conn->multi_query($query)) {
                         throw new mysqli_sql_exception();
                     }
-
                     $json = array("status" => 1, "msg" => "Registration Completed");
                 }
-
                 $conn->close();
 
             } catch (mysqli_sql_exception $e) {
@@ -152,39 +146,51 @@ class API {
         header("Access-Control-Allow-Orgin: *");
         header("Access-Control-Allow-Methods: *");
         header("Content-Type: application/json");
-
         header("HTTP/1.1 " . $status . " " . $this->getStatus($status));
         return json_encode($data);
     }
 
 
     public function authenticateUser($request) {
-        $usr = $request['username'];
-        $pwd = $request['pwd'];
+        $usr = !empty($request['username']) ? $request['username'] : '';
+        $pwd = !empty($request['pwd']) ? $request['pwd'] : '';
 
         $json = array("status" => 0, "msg" => "Incorrect username or password");
 
-        if (isset($usr) && isset($pwd)) {
+        if (!empty($usr) && !empty($pwd)) {
             try {
+
                 $conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
                 $usr = mysqli_real_escape_string($conn, $usr);
                 $pwd = mysqli_real_escape_string($conn, $pwd);
                 $pwd = md5($pwd);
-                $query = "Select * from account where account.`username` = '$usr' OR account.`password` = '$pwd' ";
+
+                $query = "Select * from user where user.`username` = '$usr' AND user.`password` = '$pwd' ";
                 $result = $conn->query($query);
+                $id = '';
+
                 if ($result->num_rows > 0) {
-                    $json = array("status" => 1, "msg" => "Authenticated");
+
+                    while($r = $result->fetch_assoc()) {
+                        $id = $r['id'];
+                    }
+                    
+                    $auth = new Authentication();
+                    $key = $auth->addKey($id, $usr);
+                    $json = array("status" => 1, "msg" => "Authenticated", "key" => '');
                 }
 
                 $conn->close();
+
             } catch (mysqli_sql_exception $e) {
+
                 $this->reponse('',500);
+
             }
 
         }
 
         echo $this->reponse($json);
-
 
     }
 
@@ -199,14 +205,6 @@ class API {
         }
         return $clean_input;
     }
-
-
-
-    private function createUser() {
-
-    }
-
-
 
 
 }

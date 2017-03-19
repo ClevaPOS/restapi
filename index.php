@@ -1,13 +1,12 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: vphucpham
  * Date: 1/7/17
  * Time: 11:13 PM
  */
-
     require_once(dirname(__FILE__) . '/v1/API.php');
-
 
 
     $method = $_SERVER['REQUEST_METHOD'];
@@ -30,6 +29,5 @@
             break;
 
     }
-
 
 ?>
